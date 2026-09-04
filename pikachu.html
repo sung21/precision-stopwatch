@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>피카츄 달리기 게임 (Pikachu Runner)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Noto+Sans+KR:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-yellow: #facc15;
+      --accent-red: #ef4444;
+      --accent-green: #22c55e;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #1e293b 0%, #0f172a 100%);
+      font-family: 'Noto Sans KR', sans-serif;
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 16px;
+      overflow-x: hidden;
+    }
+
+    .game-wrapper {
+      width: 100%;
+      max-width: 860px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+    }
+
+    /* Game Header */
+    .game-header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 8px;
+    }
+
+    .title-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .title-area h1 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--accent-yellow);
+      text-shadow: 0 0 20px rgba(250, 204, 21, 0.4);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .scores-area {
+      display: flex;
+      gap: 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    .hi-score {
+      color: var(--text-muted);
+    }
+
+    .current-score {
+      color: #38bdf8;
+      min-width: 80px;
+      text-align: right;
+    }
+
+    /* Canvas Container */
+    .canvas-container {
+      width: 100%;
+      position: relative;
+      background: #131b2e;
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6), 0 0 30px rgba(250, 204, 21, 0.08);
+      overflow: hidden;
+      aspect-ratio: 800 / 300;
+      cursor: pointer;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Game Over Overlay */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(4px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+      z-index: 10;
+    }
+
+    .overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .game-over-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: var(--accent-red);
+      letter-spacing: 0.1em;
+      text-shadow: 0 0 25px rgba(239, 68, 68, 0.5);
+    }
+
+    .restart-hint {
+      font-size: 1rem;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .restart-btn {
+      background: var(--accent-yellow);
+      color: #0f172a;
+      border: none;
+      padding: 12px 28px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      border-radius: 9999px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(250, 204, 21, 0.4);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .restart-btn:hover {
+      transform: scale(1.05);
+      background: #fde047;
+      box-shadow: 0 6px 20px rgba(250, 204, 21, 0.6);
+    }
+
+    /* Controls Guide & Mobile Touch */
+    .footer-bar {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 8px;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .key-guides {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .key-guide-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    kbd {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 2px 0 rgba(0,0,0,0.4);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: #f8fafc;
+      font-weight: 600;
+    }
+
+    .sound-toggle {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .sound-toggle:hover {
+      color: var(--text-main);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Mobile Buttons */
+    .mobile-controls {
+      display: none;
+      width: 100%;
+      gap: 16px;
+      margin-top: 6px;
+    }
+
+    .touch-btn {
+      flex: 1;
+      padding: 18px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 16px;
+      color: white;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      touch-action: manipulation;
+    }
+
+    .touch-btn:active {
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    .touch-jump {
+      background: rgba(250, 204, 21, 0.15);
+      border-color: rgba(250, 204, 21, 0.4);
+      color: var(--accent-yellow);
+    }
+
+    .touch-duck {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: rgba(56, 189, 248, 0.4);
+      color: #38bdf8;
+    }
+
+    @media (max-width: 680px) {
+      .mobile-controls {
+        display: flex;
+      }
+      .title-area h1 {
+        font-size: 1.15rem;
+      }
+      .scores-area {
+        font-size: 0.95rem;
+        gap: 12px;
+      }
+      .key-guides {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="game-wrapper">
+    <!-- Header -->
+    <header class="game-header">
+      <div class="title-area">
+        <h1>⚡ 피카츄 달리기</h1>
+      </div>
+      <div class="scores-area">
+        <span class="hi-score" id="hiScoreDisplay">HI 00000</span>
+        <span class="current-score" id="scoreDisplay">00000</span>
+      </div>
+    </header>
+
+    <!-- Canvas Play Area -->
+    <div class="canvas-container" id="canvasContainer">
+      <canvas id="gameCanvas" width="800" height="300"></canvas>
+      
+      <!-- Game Over Overlay -->
+      <div class="overlay" id="gameOverOverlay">
+        <div class="game-over-title">GAME OVER</div>
+        <div class="restart-hint">
+          <span>다시 도전하려면 화면을 누르거나</span>
+          <kbd>Space</kbd>
+        </div>
+        <button class="restart-btn" id="restartBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V1L8 5l4 4V6a6 6 0 1 1-6 6 1 1 0 0 0-2 0 8 8 0 1 0 8-8z"/></svg>
+          다시 시작
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Touch Controls -->
+    <div class="mobile-controls">
+      <button class="touch-btn touch-jump" id="touchJumpBtn">⬆ 점프 (Jump)</button>
+      <button class="touch-btn touch-duck" id="touchDuckBtn">⬇ 숙이기 (Duck)</button>
+    </div>
+
+    <!-- Controls Guide & Sound Toggle -->
+    <footer class="footer-bar">
+      <div class="key-guides">
+        <div class="key-guide-item">
+          <kbd>Space</kbd> 또는 <kbd>↑</kbd> <span>점프</span>
+        </div>
+        <div class="key-guide-item">
+          <kbd>↓</kbd> <span>숙이기</span>
+        </div>
+        <div class="key-guide-item">
+          <kbd>Space</kbd> <span>재시작</span>
+        </div>
+      </div>
+      <button class="sound-toggle" id="soundToggle">
+        <span id="soundIcon">🔊</span>
+        <span id="soundLabel">사운드 ON</span>
+      </button>
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      // --- Canvas & Config ---
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      const container = document.getElementById('canvasContainer');
+      const scoreDisplay = document.getElementById('scoreDisplay');
+      const hiScoreDisplay = document.getElementById('hiScoreDisplay');
+      const gameOverOverlay = document.getElementById('gameOverOverlay');
+      const restartBtn = document.getElementById('restartBtn');
+      const soundToggle = document.getElementById('soundToggle');
+      const soundIcon = document.getElementById('soundIcon');
+      const soundLabel = document.getElementById('soundLabel');
+      const touchJumpBtn = document.getElementById('touchJumpBtn');
+      const touchDuckBtn = document.getElementById('touchDuckBtn');
+
+      const CANVAS_WIDTH = 800;
+      const CANVAS_HEIGHT = 300;
+      const GROUND_Y = 240; // 바닥 y좌표
+
+      // --- Sound Synthesizer (Web Audio API) ---
+      let audioCtx = null;
+      let soundEnabled = true;
+
+      function initAudio() {
+        if (!audioCtx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) audioCtx = new AudioContext();
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+      }
+
+      function playSound(type) {
+        if (!soundEnabled) return;
+        initAudio();
+        if (!audioCtx) return;
+
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === 'jump') {
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(160, now);
+          osc.frequency.exponentialRampToValueAtTime(480, now + 0.12);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
+          osc.start(now);
+          osc.stop(now + 0.12);
+        } else if (type === 'score') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(587.33, now); // D5
+          osc.frequency.setValueAtTime(880, now + 0.08); // A5
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.22);
+          osc.start(now);
+          osc.stop(now + 0.22);
+        } else if (type === 'hit') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(220, now);
+          osc.frequency.linearRampToValueAtTime(60, now + 0.25);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+          osc.start(now);
+          osc.stop(now + 0.25);
+        }
+      }
+
+      soundToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        soundEnabled = !soundEnabled;
+        soundIcon.textContent = soundEnabled ? '🔊' : '🔇';
+        soundLabel.textContent = soundEnabled ? '사운드 ON' : '사운드 OFF';
+      });
+
+      // --- Game State ---
+      let isPlaying = false;
+      let isGameOver = false;
+      let score = 0;
+      let hiScore = parseInt(localStorage.getItem('pikachu_hi_score') || '0', 10);
+      let gameSpeed = 6;
+      let nextObstacleDistance = 0;
+      let obstacles = [];
+      let clouds = [];
+      let groundOffset = 0;
+      let lastTime = 0;
+      let animationFrameId = null;
+
+      hiScoreDisplay.textContent = `HI ${String(hiScore).padStart(5, '0')}`;
+
+      // --- Pikachu Player Object ---
+      const pikachu = {
+        x: 60,
+        y: GROUND_Y,
+        width: 48,
+        height: 46,
+        duckWidth: 62,
+        duckHeight: 28,
+        vy: 0,
+        gravity: 0.65,
+        jumpPower: -12.5,
+        isGrounded: true,
+        isDucking: false,
+        runFrame: 0,
+        tailAngle: 0,
+
+        reset() {
+          this.y = GROUND_Y;
+          this.vy = 0;
+          this.isGrounded = true;
+          this.isDucking = false;
+          this.runFrame = 0;
+        },
+
+        jump() {
+          if (this.isGrounded && !this.isDucking) {
+            this.vy = this.jumpPower;
+            this.isGrounded = false;
+            playSound('jump');
+          }
+        },
+
+        duck(ducking) {
+          if (this.isGrounded) {
+            this.isDucking = ducking;
+          }
+        },
+
+        update() {
+          // Physics
+          if (!this.isGrounded) {
+            this.vy += this.gravity;
+            this.y += this.vy;
+
+            if (this.y >= GROUND_Y) {
+              this.y = GROUND_Y;
+              this.vy = 0;
+              this.isGrounded = true;
+            }
+          }
+
+          // Animation frame
+          if (isPlaying && !isGameOver) {
+            this.runFrame += 0.25;
+          }
+        },
+
+        getHitbox() {
+          if (this.isDucking && this.isGrounded) {
+            return {
+              x: this.x + 4,
+              y: this.y - this.duckHeight + 2,
+              w: this.duckWidth - 8,
+              h: this.duckHeight - 2
+            };
+          }
+          return {
+            x: this.x + 8,
+            y: this.y - this.height + 4,
+            w: this.width - 14,
+            h: this.height - 4
+          };
+        },
+
+        draw(ctx) {
+          ctx.save();
+          const drawX = this.x;
+          const drawY = this.y;
+          const isDucked = this.isDucking && this.isGrounded;
+          const legPhase = Math.sin(this.runFrame) > 0;
+
+          if (isDucked) {
+            // === Ducking Pikachu ===
+            const w = this.duckWidth;
+            const h = this.duckHeight;
+            const topY = drawY - h;
+
+            // Tail (Lightning shape stretching back)
+            ctx.fillStyle = '#8B4513';
+            ctx.beginPath();
+            ctx.moveTo(drawX - 4, drawY - 8);
+            ctx.lineTo(drawX - 16, drawY - 14);
+            ctx.lineTo(drawX - 12, drawY - 20);
+            ctx.lineTo(drawX - 26, drawY - 24);
+            ctx.lineTo(drawX - 22, drawY - 18);
+            ctx.lineTo(drawX - 8, drawY - 14);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = '#FACC15';
+            ctx.beginPath();
+            ctx.moveTo(drawX - 12, drawY - 20);
+            ctx.lineTo(drawX - 26, drawY - 24);
+            ctx.lineTo(drawX - 22, drawY - 18);
+            ctx.lineTo(drawX - 14, drawY - 16);
+            ctx.closePath();
+            ctx.fill();
+
+            // Body (Low and stretched)
+            ctx.fillStyle = '#FACC15';
+            ctx.beginPath();
+            ctx.ellipse(drawX + w / 2 - 2, drawY - h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Back brown stripes
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(drawX + 16, topY + 4);
+            ctx.lineTo(drawX + 16, topY + 12);
+            ctx.moveTo(drawX + 26, topY + 4);
+            ctx.lineTo(drawX + 26, topY + 12);
+            ctx.stroke();
+
+            // Flattened Ears
+            ctx.fillStyle = '#FACC15';
+            ctx.beginPath();
+            ctx.ellipse(drawX + 12, topY + 6, 14, 5, -0.2, 0, Math.PI * 2);
+            ctx.fill();
+            // Ear tip black
+            ctx.fillStyle = '#111827';
+            ctx.beginPath();
+            ctx.ellipse(drawX + 2, topY + 4, 5, 4, -0.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eye
+            ctx.fillStyle = isGameOver ? '#EF4444' : '#111827';
+            if (isGameOver) {
+              ctx.strokeStyle = '#EF4444';
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.moveTo(drawX + w - 16, topY + 7);
+              ctx.lineTo(drawX + w - 10, topY + 13);
+              ctx.moveTo(drawX + w - 10, topY + 7);
+              ctx.lineTo(drawX + w - 16, topY + 13);
+              ctx.stroke();
+            } else {
+              ctx.beginPath();
+              ctx.arc(drawX + w - 14, topY + 10, 3.5, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.fillStyle = '#FFFFFF';
+              ctx.beginPath();
+              ctx.arc(drawX + w - 15, topY + 9, 1.2, 0, Math.PI * 2);
+              ctx.fill();
+            }
+
+            // Red Cheek
+            ctx.fillStyle = '#EF4444';
+            ctx.beginPath();
+            ctx.arc(drawX + w - 10, topY + 18, 4.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Little running feet
+            ctx.fillStyle = '#EAB308';
+            ctx.beginPath();
+            ctx.ellipse(drawX + 12 + (legPhase ? 4 : -4), drawY - 2, 6, 3, 0, 0, Math.PI * 2);
+            ctx.ellipse(drawX + w - 14 + (legPhase ? -4 : 4), drawY - 2, 6, 3, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+          } else {
+            // === Standing / Running / Jumping Pikachu ===
+            const w = this.width;
+            const h = this.height;
+            const topY = drawY - h;
+
+            // Tail
+            ctx.fillStyle = '#8B4513';
+            ctx.beginPath();
+            ctx.moveTo(drawX + 4, drawY - 14);
+            ctx.lineTo(drawX - 10, drawY - 24);
+            ctx.lineTo(drawX - 6, drawY - 30);
+            ctx.lineTo(drawX - 18, drawY - 40);
+            ctx.lineTo(drawX - 12, drawY - 32);
+            ctx.lineTo(drawX - 2, drawY - 20);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = '#FACC15';
+            ctx.beginPath();
+            ctx.moveTo(drawX - 6, drawY - 30);
+            ctx.lineTo(drawX - 18, drawY - 40);
+            ctx.lineTo(drawX - 12, drawY - 32);
+            ctx.lineTo(drawX - 2, drawY - 20);
+            ctx.closePath();
+            ctx.fill();
+
+            // Body
+            ctx.fillStyle = '#FACC15';
+            ctx.beginPath();
+            ctx.ellipse(drawX + w / 2, drawY - h / 2, w / 2 - 2, h / 2 - 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Back Stripes
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(drawX + 10, drawY - 28);
+            ctx.lineTo(drawX + 18, drawY - 28);
+            ctx.moveTo(drawX + 8, drawY - 20);
+            ctx.lineTo(drawX + 16, drawY - 20);
+            ctx.stroke();
+
+            // Ears
+            // Left Ear
+            ctx.fillStyle = '#FACC15';
+            ctx.beginPath();
+            ctx.moveTo(drawX + 14, topY + 8);
+            ctx.lineTo(drawX + 4, topY - 16);
+            ctx.lineTo(drawX + 18, topY + 2);
+            ctx.closePath();
+            ctx.fill();
+            // Left Ear Tip (Black)
+            ctx.fillStyle = '#111827';
+            ctx.beginPath();
+            ctx.moveTo(drawX + 8, topY - 8);
+            ctx.lineTo(drawX + 4, topY - 16);
+            ctx.lineTo(drawX + 14, topY - 3);
+            ctx.closePath();
+            ctx.fill();
+
+            // Right Ear
+            ctx.fillStyle = '#FACC15';
+            ctx.beginPath();
+            ctx.moveTo(drawX + 28, topY + 4);
+            ctx.lineTo(drawX + 40, topY - 18);
+            ctx.lineTo(drawX + 34, topY + 10);
+            ctx.closePath();
+            ctx.fill();
+            // Right Ear Tip (Black)
+            ctx.fillStyle = '#111827';
+            ctx.beginPath();
+            ctx.moveTo(drawX + 32, topY - 6);
+            ctx.lineTo(drawX + 40, topY - 18);
+            ctx.lineTo(drawX + 37, topY - 2);
+            ctx.closePath();
+            ctx.fill();
+
+            // Eye
+            if (isGameOver) {
+              ctx.strokeStyle = '#EF4444';
+              ctx.lineWidth = 2.5;
+              // X eye
+              ctx.beginPath();
+              ctx.moveTo(drawX + 30, topY + 14);
+              ctx.lineTo(drawX + 38, topY + 22);
+              ctx.moveTo(drawX + 38, topY + 14);
+              ctx.lineTo(drawX + 30, topY + 22);
+              ctx.stroke();
+            } else {
+              ctx.fillStyle = '#111827';
+              ctx.beginPath();
+              ctx.arc(drawX + 34, topY + 18, 4.5, 0, Math.PI * 2);
+              ctx.fill();
+              // Catchlight
+              ctx.fillStyle = '#FFFFFF';
+              ctx.beginPath();
+              ctx.arc(drawX + 32.5, topY + 16.5, 1.6, 0, Math.PI * 2);
+              ctx.fill();
+            }
+
+            // Red Cheek
+            ctx.fillStyle = '#EF4444';
+            ctx.beginPath();
+            ctx.arc(drawX + 36, topY + 28, 5.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Mouth
+            ctx.strokeStyle = '#111827';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            if (isGameOver) {
+              // sad curve
+              ctx.arc(drawX + 42, topY + 28, 4, Math.PI, Math.PI * 2);
+            } else {
+              // cute smile
+              ctx.arc(drawX + 42, topY + 23, 3, 0.2, Math.PI * 0.9);
+            }
+            ctx.stroke();
+
+            // Tiny Front Hands
+            ctx.fillStyle = '#EAB308';
+            ctx.beginPath();
+            ctx.ellipse(drawX + 34, drawY - 14, 4, 3, 0.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Feet (Running animation or Jump pose)
+            ctx.fillStyle = '#EAB308';
+            if (!this.isGrounded) {
+              // Jump: feet tucked
+              ctx.beginPath();
+              ctx.ellipse(drawX + 16, drawY - 2, 7, 4, -0.3, 0, Math.PI * 2);
+              ctx.ellipse(drawX + 32, drawY - 2, 7, 4, 0.3, 0, Math.PI * 2);
+              ctx.fill();
+            } else {
+              // Running: alternating feet
+              const leftOffset = legPhase ? -5 : 5;
+              const rightOffset = legPhase ? 5 : -5;
+              ctx.beginPath();
+              ctx.ellipse(drawX + 16 + leftOffset, drawY - 1, 6, 3, 0, 0, Math.PI * 2);
+              ctx.ellipse(drawX + 32 + rightOffset, drawY - 1, 6, 3, 0, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+
+          ctx.restore();
+        }
+      };
+
+      // --- Obstacles Management ---
+      class Obstacle {
+        constructor(type, x) {
+          this.type = type; // 'cactus-s', 'cactus-l', 'cactus-group', 'bird'
+          this.x = x;
+          this.markedForDeletion = false;
+
+          if (type === 'cactus-s') {
+            this.w = 24;
+            this.h = 44;
+            this.y = GROUND_Y - this.h;
+          } else if (type === 'cactus-l') {
+            this.w = 32;
+            this.h = 58;
+            this.y = GROUND_Y - this.h;
+          } else if (type === 'cactus-group') {
+            this.w = 54;
+            this.h = 48;
+            this.y = GROUND_Y - this.h;
+          } else if (type === 'bird') {
+            // High flying or mid flying obstacle to duck or jump
+            this.w = 42;
+            this.h = 28;
+            // Mid height: must duck!
+            this.y = GROUND_Y - 48;
+            this.wingFrame = 0;
+          }
+        }
+
+        update(speed) {
+          this.x -= speed;
+          if (this.x + this.w < -20) {
+            this.markedForDeletion = true;
+          }
+          if (this.type === 'bird') {
+            this.wingFrame += 0.2;
+          }
+        }
+
+        getHitbox() {
+          return {
+            x: this.x + 4,
+            y: this.y + 4,
+            w: this.w - 8,
+            h: this.h - 6
+          };
+        }
+
+        draw(ctx) {
+          ctx.save();
+          if (this.type.startsWith('cactus')) {
+            // Draw Cactus
+            ctx.fillStyle = '#22c55e';
+            ctx.strokeStyle = '#15803d';
+            ctx.lineWidth = 2;
+
+            if (this.type === 'cactus-s') {
+              this.drawSingleCactus(ctx, this.x, this.y, this.w, this.h);
+            } else if (this.type === 'cactus-l') {
+              this.drawSingleCactus(ctx, this.x, this.y, this.w, this.h);
+            } else if (this.type === 'cactus-group') {
+              this.drawSingleCactus(ctx, this.x, this.y + 8, 22, this.h - 8);
+              this.drawSingleCactus(ctx, this.x + 24, this.y, 26, this.h);
+            }
+          } else if (this.type === 'bird') {
+            // Flying Thunder/Bird Obstacle (Electabuzz/Zapdos silhouette style or Flying Pidgey)
+            const flap = Math.sin(this.wingFrame) > 0;
+            ctx.fillStyle = '#38bdf8'; // Electric blue flying drone/pidgeot
+            ctx.beginPath();
+            ctx.ellipse(this.x + 20, this.y + 14, 18, 9, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Beak
+            ctx.fillStyle = '#f59e0b';
+            ctx.beginPath();
+            ctx.moveTo(this.x + 4, this.y + 14);
+            ctx.lineTo(this.x - 6, this.y + 16);
+            ctx.lineTo(this.x + 4, this.y + 18);
+            ctx.closePath();
+            ctx.fill();
+
+            // Wings
+            ctx.fillStyle = '#0284c7';
+            ctx.beginPath();
+            if (flap) {
+              ctx.moveTo(this.x + 16, this.y + 10);
+              ctx.lineTo(this.x + 24, this.y - 12);
+              ctx.lineTo(this.x + 30, this.y + 12);
+            } else {
+              ctx.moveTo(this.x + 16, this.y + 16);
+              ctx.lineTo(this.x + 24, this.y + 30);
+              ctx.lineTo(this.x + 30, this.y + 14);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            // Eye
+            ctx.fillStyle = '#111827';
+            ctx.beginPath();
+            ctx.arc(this.x + 10, this.y + 12, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+
+        drawSingleCactus(ctx, x, y, w, h) {
+          const mainW = Math.max(10, w * 0.4);
+          const centerX = x + w / 2;
+
+          // Main trunk
+          ctx.beginPath();
+          ctx.roundRect(centerX - mainW / 2, y, mainW, h, [4, 4, 0, 0]);
+          ctx.fill();
+          ctx.stroke();
+
+          // Left branch
+          const branchY = y + h * 0.35;
+          ctx.beginPath();
+          ctx.moveTo(centerX - mainW / 2, branchY + 8);
+          ctx.lineTo(x + 2, branchY + 8);
+          ctx.lineTo(x + 2, branchY - 6);
+          ctx.lineWidth = 5;
+          ctx.stroke();
+
+          // Right branch
+          const rBranchY = y + h * 0.25;
+          ctx.beginPath();
+          ctx.moveTo(centerX + mainW / 2, rBranchY + 8);
+          ctx.lineTo(x + w - 2, rBranchY + 8);
+          ctx.lineTo(x + w - 2, rBranchY - 8);
+          ctx.lineWidth = 5;
+          ctx.stroke();
+
+          ctx.lineWidth = 2;
+        }
+      }
+
+      // --- Background Clouds & Ground ---
+      function spawnCloud() {
+        clouds.push({
+          x: CANVAS_WIDTH + Math.random() * 80,
+          y: 35 + Math.random() * 70,
+          w: 60 + Math.random() * 40,
+          speed: 0.8 + Math.random() * 0.8
+        });
+      }
+
+      for (let i = 0; i < 4; i++) {
+        clouds.push({
+          x: Math.random() * CANVAS_WIDTH,
+          y: 35 + Math.random() * 70,
+          w: 60 + Math.random() * 40,
+          speed: 0.8 + Math.random() * 0.8
+        });
+      }
+
+      // --- Collision Check (AABB) ---
+      function checkCollision(box1, box2) {
+        return (
+          box1.x < box2.x + box2.w &&
+          box1.x + box1.w > box2.x &&
+          box1.y < box2.y + box2.h &&
+          box1.y + box1.h > box2.y
+        );
+      }
+
+      // --- Spawn Obstacle Logic ---
+      function handleObstacles() {
+        if (nextObstacleDistance <= 0) {
+          const types = ['cactus-s', 'cactus-l', 'cactus-group'];
+          // Introduce bird flying obstacles when score is over 250
+          if (score > 250 && Math.random() < 0.35) {
+            types.push('bird');
+          }
+          const chosenType = types[Math.floor(Math.random() * types.length)];
+          obstacles.push(new Obstacle(chosenType, CANVAS_WIDTH + 50));
+
+          // Next obstacle spawn delay based on current speed
+          const minGap = 260 + gameSpeed * 8;
+          const maxGap = 520 + gameSpeed * 15;
+          nextObstacleDistance = minGap + Math.random() * (maxGap - minGap);
+        } else {
+          nextObstacleDistance -= gameSpeed;
+        }
+      }
+
+      // --- Game Lifecycle ---
+      function startGame() {
+        if (isPlaying) return;
+        initAudio();
+        isPlaying = true;
+        isGameOver = false;
+        score = 0;
+        gameSpeed = 6.2;
+        obstacles = [];
+        nextObstacleDistance = 120;
+        pikachu.reset();
+        gameOverOverlay.classList.remove('active');
+        lastTime = performance.now();
+      }
+
+      function gameOver() {
+        isPlaying = false;
+        isGameOver = true;
+        playSound('hit');
+
+        // Check & Save High Score
+        if (score > hiScore) {
+          hiScore = score;
+          localStorage.setItem('pikachu_hi_score', hiScore);
+          hiScoreDisplay.textContent = `HI ${String(hiScore).padStart(5, '0')}`;
+        }
+
+        gameOverOverlay.classList.add('active');
+      }
+
+      // --- Main Render & Update Loop ---
+      function loop(currentTime) {
+        animationFrameId = requestAnimationFrame(loop);
+
+        // Clear canvas
+        ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+        // 1. Draw Subdued Watermark "MCRG" in background
+        ctx.save();
+        ctx.font = '900 130px "JetBrains Mono", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        // Very subtle opacity so it doesn't distract the gameplay
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.035)';
+        ctx.letterSpacing = '12px';
+        ctx.fillText('MCRG', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 10);
+        ctx.restore();
+
+        // 2. Draw Clouds
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+        clouds.forEach((cloud, index) => {
+          if (isPlaying) cloud.x -= cloud.speed;
+          if (cloud.x + cloud.w < -50) {
+            cloud.x = CANVAS_WIDTH + Math.random() * 60;
+            cloud.y = 35 + Math.random() * 70;
+          }
+          ctx.beginPath();
+          ctx.roundRect(cloud.x, cloud.y, cloud.w, 18, 9);
+          ctx.fill();
+        });
+        ctx.restore();
+
+        // 3. Draw Ground Line & Texture
+        if (isPlaying) {
+          groundOffset = (groundOffset + gameSpeed) % 24;
+        }
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, GROUND_Y);
+        ctx.lineTo(CANVAS_WIDTH, GROUND_Y);
+        ctx.stroke();
+
+        // Little ground pebbles/dashes
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+        for (let i = -groundOffset; i < CANVAS_WIDTH; i += 28) {
+          ctx.fillRect(i, GROUND_Y + 6, 8, 2);
+          if (i % 56 === 0) {
+            ctx.fillRect(i + 14, GROUND_Y + 12, 12, 2);
+          }
+        }
+        ctx.restore();
+
+        // 4. Update & Draw Obstacles
+        if (isPlaying) {
+          handleObstacles();
+        }
+
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+          const obs = obstacles[i];
+          if (isPlaying) {
+            obs.update(gameSpeed);
+          }
+          obs.draw(ctx);
+
+          // Collision test
+          if (isPlaying && checkCollision(pikachu.getHitbox(), obs.getHitbox())) {
+            gameOver();
+          }
+
+          if (obs.markedForDeletion) {
+            obstacles.splice(i, 1);
+          }
+        }
+
+        // 5. Update & Draw Pikachu
+        pikachu.update();
+        pikachu.draw(ctx);
+
+        // 6. Score progression
+        if (isPlaying) {
+          score += 0.15;
+          const currentFloorScore = Math.floor(score);
+          scoreDisplay.textContent = String(currentFloorScore).padStart(5, '0');
+
+          // Speed increment slightly every 100 points
+          if (currentFloorScore > 0 && currentFloorScore % 100 === 0 && Math.floor(score - 0.15) !== currentFloorScore) {
+            gameSpeed = Math.min(13.5, gameSpeed + 0.35);
+            playSound('score');
+          }
+        }
+      }
+
+      // --- Input Handling ---
+      const activeKeys = {};
+
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' || e.code === 'ArrowUp') {
+          e.preventDefault();
+          if (isGameOver) {
+            startGame();
+          } else if (!isPlaying) {
+            startGame();
+            pikachu.jump();
+          } else {
+            pikachu.jump();
+          }
+        } else if (e.code === 'ArrowDown') {
+          e.preventDefault();
+          activeKeys['ArrowDown'] = true;
+          if (isPlaying) {
+            pikachu.duck(true);
+          }
+        }
+      });
+
+      window.addEventListener('keyup', (e) => {
+        if (e.code === 'ArrowDown') {
+          activeKeys['ArrowDown'] = false;
+          pikachu.duck(false);
+        }
+      });
+
+      // Canvas click/touch to jump or start
+      container.addEventListener('pointerdown', (e) => {
+        if (isGameOver) {
+          startGame();
+        } else if (!isPlaying) {
+          startGame();
+          pikachu.jump();
+        } else {
+          pikachu.jump();
+        }
+      });
+
+      restartBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        startGame();
+      });
+
+      // Mobile Touch buttons
+      touchJumpBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (isGameOver || !isPlaying) startGame();
+        pikachu.jump();
+      });
+      touchDuckBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        pikachu.duck(true);
+      });
+      touchDuckBtn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        pikachu.duck(false);
+      });
+
+      // Mouse compatibility for touch buttons
+      touchJumpBtn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        if (isGameOver || !isPlaying) startGame();
+        pikachu.jump();
+      });
+      touchDuckBtn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        pikachu.duck(true);
+      });
+      touchDuckBtn.addEventListener('mouseup', (e) => {
+        e.preventDefault();
+        pikachu.duck(false);
+      });
+
+      // Start initial loop
+      animationFrameId = requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>
