@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>스톱워치 (Stopwatch)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0b0f19 0%, #111827 50%, #1e1b4b 100%);
+      --card-bg: rgba(23, 29, 45, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+      --accent-green: #10b981;
+      --accent-green-hover: #059669;
+      --accent-red: #ef4444;
+      --accent-red-hover: #dc2626;
+      --accent-blue: #3b82f6;
+      --accent-blue-hover: #2563eb;
+      --accent-gray: #475569;
+      --accent-gray-hover: #334155;
+      --fastest: #10b981;
+      --slowest: #f43f5e;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg-gradient);
+      font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      overflow-x: hidden;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 520px;
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 28px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(99, 102, 241, 0.1);
+      padding: 40px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 36px;
+      position: relative;
+    }
+
+    header {
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-sub);
+    }
+
+    /* Display Section */
+    .timer-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      width: 100%;
+      padding: 20px 0;
+    }
+
+    .timer-display {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(2.8rem, 10vw, 4.4rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      text-shadow: 0 0 35px rgba(255, 255, 255, 0.15);
+      white-space: nowrap;
+    }
+
+    .time-part {
+      display: inline-block;
+      text-align: center;
+    }
+
+    .time-colon {
+      opacity: 0.6;
+      margin: 0 2px;
+    }
+
+    .time-dot {
+      opacity: 0.6;
+      margin: 0 2px;
+    }
+
+    .centiseconds {
+      font-size: clamp(2rem, 7vw, 3rem);
+      color: #38bdf8;
+      width: 2.1ch;
+      text-align: left;
+    }
+
+    /* Controls Section */
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      width: 100%;
+    }
+
+    .btn {
+      position: relative;
+      border: none;
+      outline: none;
+      border-radius: 16px;
+      padding: 16px 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: inherit;
+      color: #ffffff;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    }
+
+    .btn svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
+    .btn:active:not(:disabled) {
+      transform: scale(0.95);
+    }
+
+    .btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      filter: grayscale(0.5);
+      box-shadow: none;
+    }
+
+    .btn-start {
+      background: var(--accent-green);
+    }
+    .btn-start:hover:not(:disabled) {
+      background: var(--accent-green-hover);
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-stop {
+      background: var(--accent-red);
+    }
+    .btn-stop:hover:not(:disabled) {
+      background: var(--accent-red-hover);
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+    }
+
+    .btn-lap {
+      background: var(--accent-blue);
+    }
+    .btn-lap:hover:not(:disabled) {
+      background: var(--accent-blue-hover);
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+    }
+
+    .btn-reset {
+      background: var(--accent-gray);
+    }
+    .btn-reset:hover:not(:disabled) {
+      background: var(--accent-gray-hover);
+      box-shadow: 0 0 16px rgba(71, 85, 105, 0.4);
+    }
+
+    /* Laps Section */
+    .laps-container {
+      width: 100%;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .laps-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 12px 6px 12px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-sub);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .laps-list {
+      list-style: none;
+      max-height: 230px;
+      overflow-y: auto;
+      padding-right: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .laps-list::-webkit-scrollbar {
+      width: 6px;
+    }
+    .laps-list::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 8px;
+    }
+    .laps-list::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+    }
+    .laps-list::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .lap-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem;
+      border: 1px solid transparent;
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .lap-item.fastest {
+      border-color: rgba(16, 185, 129, 0.3);
+      color: var(--fastest);
+      background: rgba(16, 185, 129, 0.06);
+    }
+
+    .lap-item.slowest {
+      border-color: rgba(244, 63, 94, 0.3);
+      color: var(--slowest);
+      background: rgba(244, 63, 94, 0.06);
+    }
+
+    .lap-no {
+      font-weight: 600;
+      color: var(--text-sub);
+      width: 70px;
+    }
+    .lap-item.fastest .lap-no { color: var(--fastest); }
+    .lap-item.slowest .lap-no { color: var(--slowest); }
+
+    .lap-split {
+      color: var(--text-sub);
+      font-size: 0.85rem;
+    }
+
+    .lap-time {
+      font-weight: 500;
+      text-align: right;
+    }
+
+    .empty-laps {
+      text-align: center;
+      padding: 24px 0;
+      font-size: 0.9rem;
+      color: var(--text-sub);
+      opacity: 0.6;
+    }
+
+    .keyboard-tips {
+      font-size: 0.75rem;
+      color: var(--text-sub);
+      opacity: 0.6;
+      text-align: center;
+      margin-top: -12px;
+    }
+
+    kbd {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: inherit;
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 30px 20px;
+        gap: 28px;
+      }
+      .btn {
+        padding: 12px 4px;
+        font-size: 0.9rem;
+      }
+      .btn svg {
+        width: 18px;
+        height: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <main class="container">
+    <header>
+      <h1>STOPWATCH</h1>
+    </header>
+
+    <!-- 중앙 큰 시간 표시 (1/100초 포함) -->
+    <section class="timer-wrapper" aria-label="경과 시간">
+      <div class="timer-display" id="display">
+        <span class="time-part" id="hours">00</span>
+        <span class="time-colon">:</span>
+        <span class="time-part" id="minutes">00</span>
+        <span class="time-colon">:</span>
+        <span class="time-part" id="seconds">00</span>
+        <span class="time-dot">.</span>
+        <span class="centiseconds" id="centiseconds">00</span>
+      </div>
+    </section>
+
+    <!-- 시작, 정지, 랩, 초기화 버튼 네 개 -->
+    <nav class="controls" aria-label="스톱워치 조작">
+      <button class="btn btn-start" id="startBtn" title="시작 (스페이스바)">
+        <svg viewBox="0 0 24 24"><polygon points="6,4 20,12 6,20"></polygon></svg>
+        <span>시작</span>
+      </button>
+
+      <button class="btn btn-stop" id="stopBtn" disabled title="정지 (스페이스바)">
+        <svg viewBox="0 0 24 24"><rect x="6" y="5" width="12" height="14" rx="2"></rect></svg>
+        <span>정지</span>
+      </button>
+
+      <button class="btn btn-lap" id="lapBtn" disabled title="랩 기록 (L)">
+        <svg viewBox="0 0 24 24"><path d="M5 21V4a1 1 0 0 1 1-1h11.2a1 1 0 0 1 .78 1.62L15 8l3 4.38a1 1 0 0 1-.78 1.62H7v7a1 1 0 0 1-2 0z"/></svg>
+        <span>랩</span>
+      </button>
+
+      <button class="btn btn-reset" id="resetBtn" disabled title="초기화 (R)">
+        <svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6a6 6 0 1 1-6 6 1 1 0 0 0-2 0 8 8 0 1 0 8-8z"/></svg>
+        <span>초기화</span>
+      </button>
+    </nav>
+
+    <!-- 랩 기록 목록 -->
+    <section class="laps-container" aria-label="랩 기록">
+      <div class="laps-header">
+        <span>랩 번호</span>
+        <span>구간 기록</span>
+        <span>누적 시각</span>
+      </div>
+      <ul class="laps-list" id="lapsList">
+        <li class="empty-laps" id="emptyLaps">랩 버튼을 눌러 시각을 기록하세요.</li>
+      </ul>
+    </section>
+
+    <footer class="keyboard-tips">
+      단축키: <kbd>Space</kbd> 시작/정지 &nbsp;|&nbsp; <kbd>L</kbd> 랩 &nbsp;|&nbsp; <kbd>R</kbd> 초기화
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      // DOM Elements
+      const hoursEl = document.getElementById('hours');
+      const minutesEl = document.getElementById('minutes');
+      const secondsEl = document.getElementById('seconds');
+      const centisecondsEl = document.getElementById('centiseconds');
+
+      const startBtn = document.getElementById('startBtn');
+      const stopBtn = document.getElementById('stopBtn');
+      const lapBtn = document.getElementById('lapBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      const lapsList = document.getElementById('lapsList');
+      const emptyLaps = document.getElementById('emptyLaps');
+
+      // State Variables
+      let isRunning = false;
+      let startTime = 0;
+      let elapsedTime = 0;
+      let animationFrameId = null;
+
+      // Laps: [{ lapNum, lapTime, overallTime }]
+      let laps = [];
+      let lastLapTime = 0;
+
+      // Format milliseconds to { hours, minutes, seconds, centiseconds, fullStr }
+      function formatTime(ms) {
+        const totalCs = Math.floor(ms / 10);
+        const cs = totalCs % 100;
+        const totalSec = Math.floor(totalCs / 100);
+        const sec = totalSec % 60;
+        const totalMin = Math.floor(totalSec / 60);
+        const min = totalMin % 60;
+        const hrs = Math.floor(totalMin / 60);
+
+        const pad = (num) => String(num).padStart(2, '0');
+
+        return {
+          hours: pad(hrs),
+          minutes: pad(min),
+          seconds: pad(sec),
+          centiseconds: pad(cs),
+          full: `${pad(hrs)}:${pad(min)}:${pad(sec)}.${pad(cs)}`
+        };
+      }
+
+      // Update UI with calculated time
+      function updateDisplay(ms) {
+        const t = formatTime(ms);
+        hoursEl.textContent = t.hours;
+        minutesEl.textContent = t.minutes;
+        secondsEl.textContent = t.seconds;
+        centisecondsEl.textContent = t.centiseconds;
+      }
+
+      // High-precision RAF loop
+      function tick() {
+        elapsedTime = performance.now() - startTime;
+        updateDisplay(elapsedTime);
+        animationFrameId = requestAnimationFrame(tick);
+      }
+
+      // Update button enabled/disabled states
+      function updateButtons() {
+        if (isRunning) {
+          startBtn.disabled = true;
+          stopBtn.disabled = false;
+          lapBtn.disabled = false;
+          resetBtn.disabled = true;
+        } else {
+          startBtn.disabled = false;
+          stopBtn.disabled = true;
+          lapBtn.disabled = true;
+          resetBtn.disabled = (elapsedTime === 0 && laps.length === 0);
+        }
+      }
+
+      // Start action
+      function startTimer() {
+        if (isRunning) return;
+        isRunning = true;
+        startTime = performance.now() - elapsedTime;
+        animationFrameId = requestAnimationFrame(tick);
+        updateButtons();
+      }
+
+      // Stop action
+      function stopTimer() {
+        if (!isRunning) return;
+        isRunning = false;
+        cancelAnimationFrame(animationFrameId);
+        elapsedTime = performance.now() - startTime;
+        updateDisplay(elapsedTime);
+        updateButtons();
+      }
+
+      // Lap action
+      function recordLap() {
+        if (!isRunning) return;
+
+        const currentElapsed = performance.now() - startTime;
+        const lapDuration = currentElapsed - lastLapTime;
+        lastLapTime = currentElapsed;
+
+        const lapItem = {
+          lapNum: laps.length + 1,
+          duration: lapDuration,
+          overall: currentElapsed
+        };
+
+        laps.unshift(lapItem); // Add to the top of list
+        renderLaps();
+      }
+
+      // Reset action
+      function resetTimer() {
+        if (isRunning) return;
+        cancelAnimationFrame(animationFrameId);
+        isRunning = false;
+        elapsedTime = 0;
+        startTime = 0;
+        lastLapTime = 0;
+        laps = [];
+
+        updateDisplay(0);
+        renderLaps();
+        updateButtons();
+      }
+
+      // Render Laps list
+      function renderLaps() {
+        if (laps.length === 0) {
+          lapsList.innerHTML = '';
+          lapsList.appendChild(emptyLaps);
+          return;
+        }
+
+        // Find fastest and slowest lap duration if more than 1 lap
+        let minDuration = Infinity;
+        let maxDuration = -Infinity;
+
+        if (laps.length >= 2) {
+          laps.forEach(lap => {
+            if (lap.duration < minDuration) minDuration = lap.duration;
+            if (lap.duration > maxDuration) maxDuration = lap.duration;
+          });
+        }
+
+        lapsList.innerHTML = '';
+
+        laps.forEach(lap => {
+          const li = document.createElement('li');
+          li.className = 'lap-item';
+
+          if (laps.length >= 2) {
+            if (lap.duration === minDuration) {
+              li.classList.add('fastest');
+            } else if (lap.duration === maxDuration) {
+              li.classList.add('slowest');
+            }
+          }
+
+          const formattedSplit = formatTime(lap.duration).full;
+          const formattedOverall = formatTime(lap.overall).full;
+
+          li.innerHTML = `
+            <span class="lap-no">랩 ${String(lap.lapNum).padStart(2, '0')}</span>
+            <span class="lap-split">+${formattedSplit}</span>
+            <span class="lap-time">${formattedOverall}</span>
+          `;
+
+          lapsList.appendChild(li);
+        });
+      }
+
+      // Event Listeners
+      startBtn.addEventListener('click', startTimer);
+      stopBtn.addEventListener('click', stopTimer);
+      lapBtn.addEventListener('click', recordLap);
+      resetBtn.addEventListener('click', resetTimer);
+
+      // Keyboard shortcuts
+      window.addEventListener('keydown', (e) => {
+        // Ignore if user is in an input/textarea
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+        if (e.code === 'Space') {
+          e.preventDefault();
+          if (isRunning) {
+            stopTimer();
+          } else {
+            startTimer();
+          }
+        } else if (e.code === 'KeyL' || e.key === 'l' || e.key === 'L') {
+          e.preventDefault();
+          if (isRunning) recordLap();
+        } else if (e.code === 'KeyR' || e.key === 'r' || e.key === 'R') {
+          e.preventDefault();
+          if (!isRunning && (elapsedTime > 0 || laps.length > 0)) {
+            resetTimer();
+          }
+        }
+      });
+
+      // Initial state
+      updateDisplay(0);
+      updateButtons();
+    })();
+  </script>
+</body>
+</html>
